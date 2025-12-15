@@ -9,24 +9,30 @@ This repository contains the CLI itself and built-in project templates used by `
 - Python **3.9+**
 - Git (recommended so `numsec init` can run `git init`)
 
-## Quick install (development / from GitHub)
+## Quick install
 
 The simplest way is to install the package in editable mode:
 
+1. First, clone the repository:
+```bash
+git clone https://github.com/retampweb/numsec.git
+cd numsec
+```
+
+2. Then, follow the installation steps:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-numsec --version
-numsec --help
 ```
 
-Check:
-
+3. Verify the installation:
 ```bash
-numsec --help
 numsec --version
+numsec --help
 ```
+
+Would you like me to explain any of these steps in more detail?
 
 # Usage
 
