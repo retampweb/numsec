@@ -31,8 +31,7 @@ pip install -e .
 numsec --version
 numsec --help
 ```
-
-Would you like me to explain any of these steps in more detail?
+Would you like me to explain any of these steps in more detail  (づ ᴗ _ᴗ)づ♡  ?
 
 # Usage
 
