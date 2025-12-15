@@ -1,0 +1,18 @@
+# Numsec Rules
+
+When the user types `/numsec "..."` in chat, treat it as a structured command.
+
+## Required context
+- Read `NUMSEC.md` first
+- Then read:
+  - `numsec/project.md`
+  - relevant files under `numsec/threats/THREAT-*/threat.md`
+
+## Change policy
+- For non-trivial behavior/architecture changes, create a change proposal under `numsec/changes/<change-id>/` before implementation.
+
+## Output expectations
+- Respond with:
+  - what you read
+  - what you plan to do
+  - what files you changed (if any)

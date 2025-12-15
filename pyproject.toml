@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "numsec"
+version = "0.1.0"
+description = "Security-focused spec-driven toolkit"
+requires-python = ">=3.9"
+dependencies = [
+  "click>=8.1",
+]
+
+[project.scripts]
+numsec = "numsec.cli:cli"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+numsec = ["templates/templates/**/*"]
