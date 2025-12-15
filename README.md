@@ -1,11 +1,3 @@
-███╗   ██╗██╗   ██╗███╗   ███╗███████╗███████╗ ██████╗
-████╗  ██║██║   ██║████╗ ████║██╔════╝██╔════╝██╔════╝
-██╔██╗ ██║██║   ██║██╔████╔██║███████╗█████╗  ██║
-██║╚██╗██║██║   ██║██║╚██╔╝██║╚════██║██╔══╝  ██║
-██║ ╚████║╚██████╔╝██║ ╚═╝ ██║███████║███████╗╚██████╗
-╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚══════╝ ╚═════╝
-
-
 # Numsec
 
 Numsec is a CLI for automated threat modeling inside IDEs. It analyzes code, identifies issues using STRIDE, and provides AI assistants (Cursor, Windsurf, Trae) with structured context to help remediate them.
