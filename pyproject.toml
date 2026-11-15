@@ -1,25 +1,101 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "numsec"
-version = "0.1.0"
-description = "Security-focused spec-driven toolkit"
-requires-python = ">=3.9"
-dependencies = [
-  "click>=8.1",
+dynamic = ["version"]
+description = "Automated STRIDE threat modeling for Python projects, right inside your IDE"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [
+  { name = "retampweb", email = "39591142+retampweb@users.noreply.github.com" },
 ]
+keywords = [
+  "security",
+  "threat-modeling",
+  "stride",
+  "sast",
+  "cli",
+  "cursor",
+  "windsurf",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Security",
+  "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+  "click>=8.1.7",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/retampweb/numsec"
+Repository = "https://github.com/retampweb/numsec"
+Issues = "https://github.com/retampweb/numsec/issues"
+Changelog = "https://github.com/retampweb/numsec/blob/main/CHANGELOG.md"
 
 [project.scripts]
 numsec = "numsec.cli:cli"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { attr = "numsec.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["numsec*"]
 
 [tool.setuptools.package-data]
-numsec = ["templates/templates/**/*"]
+# Templates are plain files, not a package: they must be listed explicitly.
+# The dot-patterns below are what makes `.cursor/`, `.windsurf/` and `.gitignore`
+# survive the trip into a wheel (a plain `**/*` glob silently drops them).
+numsec = [
+  "templates/templates/**/*",
+  "templates/templates/**/.*",
+  "templates/templates/**/.*/**/*",
+]
+
+[tool.setuptools.exclude-package-data]
+numsec = ["**/__pycache__/*", "**/*.pyc", "**/*.pyo"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["src/numsec/templates/templates"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "PT", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["numsec"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+markers = [
+  "slow: slow tests (building a wheel end-to-end)",
+]
