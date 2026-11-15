@@ -1,176 +1,179 @@
 # Numsec
 
-Numsec is a CLI for automated threat modeling inside IDEs. It analyzes code, identifies issues using STRIDE, and provides AI assistants (Cursor, Windsurf, Trae) with structured context to help remediate them.
+Automated STRIDE threat modeling for Python projects — run it in the terminal, and
+let the assistant you already use (Cursor, Windsurf, Trae, Claude Code, …) read the
+result.
 
-This repository contains the CLI itself and built-in project templates used by `numsec init`.
-
-## Requirements
-
-- Python **3.9+**
-- Git (recommended so `numsec init` can run `git init`)
-
-## Quick install
-
-The simplest way is to install the package in editable mode:
-
-1. First, clone the repository:
-```bash
-git clone https://github.com/retampweb/numsec.git
-cd numsec
-```
-
-2. Then, follow the installation steps:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-```
-
-3. Verify the installation:
-```bash
-numsec --version
-numsec --help
-```
-Would you like me to explain any of these steps in more detail  (づ ᴗ _ᴗ)づ♡  ?
-
-# Usage
-
-## Chat commands: `/numsec "..."`
-
-### Example inside an IDE:
-
-User in Cursor: "/numsec analyze"
-Cursor runs: numsec analyze --ai-format
-Result: numsec/threats/THREAT-001/threat.md with threat details
-
-User: "/numsec fix THREAT-001"
-Claude reads threat.md and generates a fix into numsec/changes/FIX-THREAT-001/
-
-User: "/numsec apply FIX-THREAT-001"
-The patch is applied to the codebase
-
-
-- Write chat commands as: `/numsec "<command>"`
-- The protocol and assistant expectations live in: `NUMSEC.md`
-
-If you use Windsurf/Cursor, projects created via `numsec init` also include:
-- `.windsurf/workflows/numsec.md`
-- `.cursor/rules/numsec.mdc`
-
-These files tell the assistant to read `NUMSEC.md` first, then `numsec/project.md`, and relevant `numsec/threats/THREAT-*/threat.md`.
-
-### 1) List available templates
-
-```bash
-numsec list-templates
-```
-
-### 2) Initialize a new project
-
-Creates the project directory, copies files from the template, and runs `git init`.
-
-```bash
-numsec init my-project
-```
-
-Select a template:
-
-```bash
-numsec init my-project --template basic
-```
-
-If the directory already exists:
-
-```bash
-numsec init my-project --force
-```
-
-### 3) What the `basic` template generates
-
-After `numsec init my-project` the structure will look roughly like:
-
-```
-my-project/
-  NUMSEC.md
-  .gitignore
-  .cursor/
-    rules/
-      numsec.mdc
-  .windsurf/
-    workflows/
-      numsec.md
-  README.md
-  requirements.txt
-  src/
-    app/
-      __init__.py
-      main.py
-  numsec/
-    project.md
-    architecture.md
-    security-requirements.md
-    threats/
-      README.md
-      THREAT-001/
-        threat.md
-```
-
-### 4) Run the example code from the template
-
-```bash
-cd my-project
-python -m app.main
-```
-
-## Numsec repository architecture
-
-Key parts:
-
-- `src/numsec/cli.py`
-  - CLI built on `click`
-  - MVP core commands: `init`, `list-templates`, `analyze`
-
-- `src/numsec/templates/`
-  - template loader
-  - built-in templates live under `src/numsec/templates/templates/`
-
-- `pyproject.toml`
-  - defines packaging and console script entrypoint `numsec = numsec.cli:cli`
-  - includes templates in the distribution (package data)
-
-## Numsec process (internal, for developing Numsec)
-
-In this repository, the `Numsec/` directory is used to track requirements/specs and changes.
-
-### Specs (current truth)
-
-- `Numsec/specs/<capability>/spec.md` — requirements and scenarios for the current system
-
-### Changes (proposals)
-
-- `Numsec/changes/<change-id>/proposal.md` — why/what changes
-- `Numsec/changes/<change-id>/tasks.md` — implementation checklist
-- `Numsec/changes/<change-id>/specs/...` — spec deltas
-
-Recommended flow:
-
-1. Create a change (`Numsec/changes/<id>/...`)
-2. Review/approve the proposal
-3. Implement tasks from `tasks.md`
-4. Validate (`Numsec validate <id> --strict`), then archive the change after release
-
-## Troubleshooting
-
-### `numsec` command not found
-
-- Ensure your virtual environment is activated (`source .venv/bin/activate`)
-- Ensure the package is installed (`pip install -e .`)
-
-### `numsec init` prints "No templates available"
-
-- This means templates were not included in the installation.
-- Check that you installed the package from a repository that contains `src/numsec/templates/templates/`.
+Numsec scans a project, writes one `threat.md` per finding (STRIDE category,
+severity, attack scenario, impact, remediation checklist) into `numsec/threats/`, and
+keeps the project's own context — architecture, requirements, change proposals —
+next to it. No service to sign up for, no API key, one dependency (`click`).
 
 ## Status
 
-Currently, the CLI skeleton and the minimal `basic` template are implemented. Commands like `scan-deps`, `lint`, and `plugin install` are placeholders and will be expanded in future changes.
+Alpha, `0.2.0`. Honest inventory of what works today:
+
+| Command | State | What it does |
+| --- | --- | --- |
+| `numsec init NAME` | works | scaffolds a project from a template (`basic`) and runs `git init` |
+| `numsec analyze [PATH]` | works | scans the project and writes `numsec/threats/THREAT-*/threat.md` |
+| `numsec lint [PATH]` | works | same engine, prints findings, writes nothing |
+| `numsec scan-deps [PATH]` | works | checks exactly pinned dependencies against [OSV.dev](https://osv.dev) |
+| `numsec list-templates` | works | lists bundled templates |
+| `numsec plugin list` | works | shows built-in detectors and installed detector plugins |
+| `numsec plugin install` | not implemented | explains the `pip install` route and exits 2 |
+
+The `/numsec "fix …"` and `/numsec "apply …"` commands from `NUMSEC.md` are chat
+commands that the *assistant* follows; the CLI does not implement them. The
+detectors are heuristics: treat every finding as a lead to confirm, not a proof.
+
+## Requirements
+
+- Python **3.11+**
+- Git on `PATH` if you want `numsec init` to create a repository
+
+## Install
+
+Numsec is not published on PyPI yet, so install it straight from the repository:
+
+```bash
+pipx install "git+https://github.com/retampweb/numsec.git"   # isolated CLI install
+# or, into the current environment:
+pip install "git+https://github.com/retampweb/numsec.git"
+```
+
+From a checkout, for development:
+
+```bash
+git clone https://github.com/retampweb/numsec.git
+cd numsec
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+numsec --version
+```
+
+Once a release is on PyPI, `pipx install numsec` will do the same thing.
+
+## Quick start
+
+```bash
+numsec init my-service          # scaffold + git init
+cd my-service
+numsec analyze . --ai-format    # write numsec/threats/, print JSON for your assistant
+numsec analyze . --fail-on high # same, but exit 1 when something high/critical shows up
+numsec lint .                   # findings only, nothing written
+numsec scan-deps .              # OSV.dev check for pinned dependencies
+```
+
+`numsec init` creates this structure:
+
+```
+my-service/
+├── NUMSEC.md                    # protocol the assistant reads first
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── .cursor/rules/numsec.mdc     # Cursor rule
+├── .windsurf/workflows/numsec.md
+├── numsec/
+│   ├── project.md               # what it is, data, trust boundaries
+│   ├── architecture.md          # components, data flows, integrations
+│   ├── security-requirements.md
+│   ├── threats/                 # written by `numsec analyze`
+│   └── changes/                 # one directory per proposed change
+└── src/app/{__init__,main}.py
+```
+
+## Detectors
+
+Twelve rules, each mapped to a STRIDE category and a severity:
+
+| Rule | Severity | STRIDE |
+| --- | --- | --- |
+| `hardcoded-secret` | critical | Information Disclosure |
+| `aws-access-key` | critical | Information Disclosure |
+| `github-token` | critical | Information Disclosure |
+| `slack-token` | critical | Information Disclosure |
+| `shell-injection` (`shell=True`) | high | Elevation of Privilege |
+| `os-command` (`os.system`/`os.popen`) | high | Elevation of Privilege |
+| `unsafe-eval` (`eval`/`exec`) | high | Tampering |
+| `unsafe-yaml-load` | high | Spoofing |
+| `insecure-tls` (`verify=False`, `CERT_NONE`) | medium | Spoofing |
+| `pickle-deserialization` | medium | Tampering |
+| `debug-mode` | medium | Information Disclosure |
+| `weak-hash` (`md5`, `sha1`) | low | Tampering |
+
+Scans skip hidden directories, virtualenvs, `build/`, `dist/`, `node_modules/` and
+files above 1 MiB. A line annotated with `# nosec`, or a comment, is never reported.
+
+**Secrets are redacted before they are written.** `threat.md` is committed to the
+repository, so the excerpt shows `API_KEY = "***"` rather than the key it found.
+`lint` redacts the same way and points at the location instead.
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | success, nothing above the `--fail-on` threshold |
+| `1` | findings at or above `--fail-on` (or vulnerabilities found by `scan-deps`) |
+| `2` | usage error, unknown template, or an unimplemented command |
+| `3` | network failure while talking to OSV.dev |
+
+## How `analyze` rewrites its own output
+
+Every generated file starts with `<!-- generated by numsec … -->`. On a re-run,
+Numsec deletes only directories that carry that marker and leaves everything else
+alone, so hand-written notes and your own `THREAT-*` entries survive. Threat ids are
+positional (severity first, then rule id), which keeps diffs stable between runs.
+
+## Dependency scanning
+
+`numsec scan-deps` reads `pyproject.toml` (`project.dependencies`, plus optional and
+PEP 735 `dependency-groups` with `--include-dev`) and `requirements*.txt` (following
+`-r` includes).
+
+Only exact pins (`pkg==1.2.3`) can be evaluated; ranges and bare names are reported
+as *not pinned* instead of guessed at. The lookup is unauthenticated HTTP against
+`https://api.osv.dev/v1/query`, one request per pinned package.
+
+## Plugins
+
+Extra detectors can be contributed by any distribution that declares an entry point:
+
+```toml
+[project.entry-points."numsec.detectors"]
+my_rules = "my_package.rules:get_rules"
+```
+
+`get_rules()` returns an iterable of `numsec.detect.Rule`. A plugin that raises or
+returns garbage produces a warning and is skipped — it never takes the scan down.
+Duplicate rule ids never shadow the built-ins.
+
+## Working on Numsec
+
+```bash
+pip install -e ".[dev]"
+ruff check . && ruff format --check .
+pytest                 # full suite, includes a real wheel build
+pytest -m "not slow"   # skip the packaging test
+python -m build --wheel
+```
+
+CI runs the suite on Python 3.11–3.14 plus Windows, and installs the built wheel into
+a clean virtualenv to check that `numsec init` still produces the IDE files.
+
+## Repository layout
+
+```
+src/numsec/
+├── cli.py           # click commands, exit codes, output
+├── detect.py        # rules and the line scanner
+├── analyze.py       # threat.md rendering, marker-based regeneration, redaction
+├── deps.py          # requirements parsing + OSV.dev client
+├── plugins.py       # entry-point discovery
+└── templates/       # templates copied by `numsec init`
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE). Changelog: [CHANGELOG.md](CHANGELOG.md).
