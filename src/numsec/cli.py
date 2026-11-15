@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from importlib import metadata
@@ -64,6 +66,20 @@ def _print_version(ctx: click.Context, param: click.Parameter, value: bool) -> N
     ctx.exit()
 
 
+def _silence_stdout() -> None:
+    """Point stdout at /dev/null so the interpreter's final flush stays quiet.
+
+    ``numsec lint | head`` closes the pipe early. That is normal Unix behaviour, not
+    an error, but Python raises BrokenPipeError on the next write and then complains
+    again while flushing at exit.
+    """
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+    except (OSError, ValueError):  # pragma: no cover - in-memory streams in tests
+        pass
+
+
 @contextmanager
 def _errors(ctx: click.Context) -> Iterator[None]:
     """Translate internal errors into exit codes, but never swallow click aborts.
@@ -76,6 +92,9 @@ def _errors(ctx: click.Context) -> Iterator[None]:
         yield
     except (click.Abort, click.UsageError, click.exceptions.Exit):
         raise
+    except BrokenPipeError:
+        _silence_stdout()
+        ctx.exit(1)
     except NetworkError as exc:
         click.secho(f"Network error: {exc}", fg="red", err=True)
         ctx.exit(EXIT_NETWORK)

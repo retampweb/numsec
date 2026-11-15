@@ -126,6 +126,22 @@ def test_refusing_to_init_into_a_busy_directory_is_a_clean_abort(tmp_path: Path)
     assert "Error:" not in output
 
 
+def test_a_closed_pipe_is_not_reported_as_an_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`numsec analyze | head` must not print "Error: [Errno 32] Broken pipe"."""
+
+    def explode(*args: object, **kwargs: object) -> None:
+        raise BrokenPipeError
+
+    monkeypatch.setattr("numsec.cli.analyze_project", explode)
+
+    exit_code, output = invoke("analyze", str(tmp_path), "--ai-format")
+
+    assert exit_code == 1
+    assert "Error" not in output
+
+
 def test_usage_errors_keep_their_own_exit_code() -> None:
     exit_code, _ = invoke("analyze", "/definitely/not/a/path")
 
