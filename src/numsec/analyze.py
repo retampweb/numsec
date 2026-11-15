@@ -200,6 +200,7 @@ def analyze_project(
     project_root: Path,
     *,
     write: bool = True,
+    rules: tuple[Rule, ...] = DEFAULT_RULES,
 ) -> AnalysisResult:
     """Scan ``project_root`` and (optionally) write ``numsec/threats`` artefacts."""
     root = project_root.resolve()
@@ -207,7 +208,7 @@ def analyze_project(
         raise NotADirectoryError(f"Not a directory: {root}")
 
     threats_dir = root / "numsec" / "threats"
-    scan = scan_project(root, DEFAULT_RULES)
+    scan = scan_project(root, rules)
 
     # Generated artefacts must not become scan input.
     findings = tuple(

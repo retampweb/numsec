@@ -34,7 +34,7 @@ def test_help_lists_the_commands() -> None:
     exit_code, output = invoke("--help")
 
     assert exit_code == 0
-    for command in ("analyze", "init", "lint", "list-templates"):
+    for command in ("analyze", "init", "lint", "list-templates", "plugin", "scan-deps"):
         assert command in output
 
 

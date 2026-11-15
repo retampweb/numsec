@@ -12,8 +12,10 @@ import click
 
 from . import __version__
 from .analyze import AnalysisResult, analyze_project, redact
+from .deps import DependencyReport, scan_dependencies
 from .detect import Severity, scan_project
-from .exceptions import NumsecError
+from .exceptions import NetworkError, NumsecError, PluginError
+from .plugins import ENTRY_POINT_GROUP, iter_plugin_entry_points, load_plugin_rules, resolve_rules
 from .templates import get_available_templates, init_project
 from .utils import ensure_python_version
 
@@ -37,6 +39,7 @@ SEVERITY_CHOICES = click.Choice([severity.value for severity in Severity], case_
 
 EXIT_FINDINGS = 1
 EXIT_ERROR = 2
+EXIT_NETWORK = 3
 
 _SEVERITY_COLORS = {
     Severity.CRITICAL: "red",
@@ -73,6 +76,9 @@ def _errors(ctx: click.Context) -> Iterator[None]:
         yield
     except (click.Abort, click.UsageError, click.exceptions.Exit):
         raise
+    except NetworkError as exc:
+        click.secho(f"Network error: {exc}", fg="red", err=True)
+        ctx.exit(EXIT_NETWORK)
     except NumsecError as exc:
         message = str(exc)
         if ctx.obj and ctx.obj.get("VERBOSE"):
@@ -205,7 +211,7 @@ def _echo_analysis(result: AnalysisResult) -> None:
 def analyze(ctx: click.Context, path: Path, ai_format: bool, fail_on: str | None) -> None:
     """Scan a project and write numsec/threats/THREAT-*/threat.md."""
     with _errors(ctx):
-        result = analyze_project(path)
+        result = analyze_project(path, rules=resolve_rules())
 
         if ai_format:
             click.echo(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
@@ -237,7 +243,7 @@ def lint(
 ) -> None:
     """Report findings to stdout; writes no files (safe for CI)."""
     with _errors(ctx):
-        scan = scan_project(path)
+        scan = scan_project(path, resolve_rules())
 
         if as_json:
             payload = {
@@ -274,6 +280,121 @@ def lint(
 
         if fail_on is not None and scan.exceeds(Severity(fail_on.lower())):
             ctx.exit(EXIT_FINDINGS)
+
+
+def _vulnerable_entries(reports: list[DependencyReport]) -> list[dict[str, object]]:
+    entries: list[dict[str, object]] = []
+    for report in reports:
+        version = report.requirement.pinned_version
+        for vulnerability in report.vulnerabilities:
+            entries.append(
+                {
+                    "package": report.requirement.name,
+                    "version": version,
+                    "id": vulnerability.id,
+                    "severity": vulnerability.severity,
+                    "summary": vulnerability.summary,
+                    "aliases": list(vulnerability.aliases),
+                    "source": report.requirement.source,
+                }
+            )
+    return entries
+
+
+@cli.command("scan-deps")
+@click.argument(
+    "path",
+    default=".",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit the report as JSON.")
+@click.option("--timeout", type=click.FloatRange(1.0, 60.0), default=10.0, show_default=True)
+@click.option("--include-dev", is_flag=True, help="Also check optional/dev dependency groups.")
+@click.pass_context
+def scan_deps(
+    ctx: click.Context,
+    path: Path,
+    as_json: bool,
+    timeout: float,
+    include_dev: bool,
+) -> None:
+    """Check pinned dependencies for known vulnerabilities (OSV.dev)."""
+    with _errors(ctx):
+        reports = scan_dependencies(path, timeout=timeout, include_optional=include_dev)
+        pinned = [report for report in reports if report.requirement.pinned_version]
+        unpinned = [report for report in reports if report.skipped_reason]
+        vulnerable = [report for report in reports if report.vulnerable]
+        entries = _vulnerable_entries(vulnerable)
+
+        if as_json:
+            payload = {
+                "status": "ok",
+                "project_root": str(path.resolve()),
+                "checked": len(pinned),
+                "skipped": [
+                    {"package": report.requirement.display, "reason": report.skipped_reason}
+                    for report in unpinned
+                ],
+                "vulnerable": entries,
+            }
+            click.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+        elif not reports:
+            click.secho(
+                "No dependencies found (looked for pyproject.toml and requirements*.txt).",
+                fg="yellow",
+            )
+        else:
+            click.echo(f"Checked {len(pinned)} pinned, skipped {len(unpinned)} not pinned")
+            if entries:
+                click.secho(f"✗ {len(entries)} known vulnerabilit(ies)", fg="red")
+                for entry in entries:
+                    click.echo(
+                        f"  {entry['package']}=={entry['version']}  "
+                        f"{str(entry['severity']).upper():<8} {entry['id']}"
+                    )
+                    click.echo(f"      {entry['summary']}")
+            else:
+                click.secho("✓ No known vulnerabilities in pinned dependencies", fg="green")
+
+        if entries:
+            ctx.exit(EXIT_FINDINGS)
+
+
+@cli.group()
+def plugin() -> None:
+    """Manage detector plugins."""
+
+
+@plugin.command("list")
+def list_plugins() -> None:
+    """Show built-in detectors and installed plugins."""
+    builtin = resolve_rules(include_plugins=False)
+    click.echo(f"Built-in detectors ({len(builtin)}):")
+    for rule in builtin:
+        click.echo(f"  {rule.severity.value.upper():<8} {rule.id:<22} {rule.title}")
+
+    entry_points = iter_plugin_entry_points()
+    if not entry_points:
+        click.echo(f"\nPlugins: none (entry point group '{ENTRY_POINT_GROUP}').")
+        return
+
+    loaded = load_plugin_rules()
+    click.echo(f"\nPlugins: {len(entry_points)} entry point(s), {len(loaded)} rule(s)")
+    for entry_point in entry_points:
+        click.echo(f"  {entry_point.name:<22} {entry_point.value}")
+
+
+@plugin.command("install")
+@click.argument("plugin_name")
+@click.pass_context
+def install_plugin(ctx: click.Context, plugin_name: str) -> None:
+    """Explain how to install a detector plugin."""
+    with _errors(ctx):
+        raise PluginError(
+            "Installing plugins from the CLI is not implemented. "
+            f"Run 'pip install {plugin_name}': any distribution that declares a "
+            f"'{ENTRY_POINT_GROUP}' entry point is picked up by analyze/lint automatically."
+        )
 
 
 if __name__ == "__main__":

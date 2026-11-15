@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Iterator, Sequence
-from typing import TypeVar
-
-T = TypeVar("T")
 
 
 def ensure_python_version(min_version: tuple[int, int]) -> None:
@@ -26,17 +22,9 @@ def ensure_python_version(min_version: tuple[int, int]) -> None:
         )
 
 
-def chunked(items: Sequence[T], size: int) -> Iterator[Sequence[T]]:
-    """Yield consecutive slices of at most ``size`` items."""
-    if size < 1:
-        raise ValueError("size must be a positive integer")
-    for start in range(0, len(items), size):
-        yield items[start : start + size]
-
-
 def shorten(text: str, limit: int = 160) -> str:
     """Collapse whitespace and trim ``text`` so it fits a single report line."""
     compact = " ".join(text.split())
     if len(compact) <= limit:
         return compact
-    return compact[: limit - 1] + "…"
+    return compact[: limit - 1] + "\u2026"
