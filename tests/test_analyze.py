@@ -108,7 +108,7 @@ def test_result_is_json_serialisable_even_with_hostile_paths(tmp_path: Path) -> 
     result = analyze_project(project)
     payload = json.loads(json.dumps(result.to_dict(), ensure_ascii=False))
 
-    assert payload["project_root"] == str(project)
+    assert payload["project_root"] == project.as_posix()
     assert payload["max_severity"] == Severity.CRITICAL.value
     assert payload["threats"][0]["occurrences"][0]["location"] == "leak.py:1"
 

@@ -79,12 +79,12 @@ class AnalysisResult:
         return {
             "status": "ok",
             "mode": "static-rules",
-            "project_root": str(self.project_root),
-            "threats_dir": str(self.threats_dir),
+            "project_root": self.project_root.as_posix(),
+            "threats_dir": self.threats_dir.as_posix(),
             "files_scanned": self.scan.files_scanned,
             "findings": len(self.scan.findings),
             "max_severity": self.max_severity.value if self.max_severity else None,
-            "generated": [str(path) for path in self.generated],
+            "generated": [path.as_posix() for path in self.generated],
             "removed": list(self.removed),
             "preserved": list(self.preserved),
             "threats": [

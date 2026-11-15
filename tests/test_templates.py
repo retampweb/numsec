@@ -48,7 +48,9 @@ def test_unknown_template_raises_a_readable_error() -> None:
 def test_template_ships_every_documented_file() -> None:
     template = get_template_path("basic")
 
-    present = {str(path.relative_to(template)) for path in template.rglob("*") if path.is_file()}
+    present = {
+        path.relative_to(template).as_posix() for path in template.rglob("*") if path.is_file()
+    }
 
     assert present == EXPECTED_FILES
 
@@ -59,7 +61,7 @@ def test_init_copies_the_whole_tree(tmp_path: Path) -> None:
     copied = init_project(project, "basic", run_git=False)
 
     assert len(copied) == len(EXPECTED_FILES)
-    assert {str(path.relative_to(project)) for path in copied} == EXPECTED_FILES
+    assert {path.relative_to(project).as_posix() for path in copied} == EXPECTED_FILES
     assert (project / "numsec" / "changes").is_dir()
 
 

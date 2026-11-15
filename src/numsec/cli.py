@@ -267,7 +267,7 @@ def lint(
         if as_json:
             payload = {
                 "status": "ok",
-                "project_root": str(path.resolve()),
+                "project_root": path.resolve().as_posix(),
                 "files_scanned": scan.files_scanned,
                 "findings": [
                     {
@@ -348,7 +348,7 @@ def scan_deps(
         if as_json:
             payload = {
                 "status": "ok",
-                "project_root": str(path.resolve()),
+                "project_root": path.resolve().as_posix(),
                 "checked": len(pinned),
                 "skipped": [
                     {"package": report.requirement.display, "reason": report.skipped_reason}

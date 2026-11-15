@@ -78,7 +78,9 @@ class Finding:
 
     @property
     def location(self) -> str:
-        return f"{self.path}:{self.line}"
+        """``posix/path.py:42`` — always forward slashes, so artefacts generated on
+        Windows and Linux stay byte-identical."""
+        return f"{self.path.as_posix()}:{self.line}"
 
 
 @dataclass(frozen=True)
