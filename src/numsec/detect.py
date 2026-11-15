@@ -163,7 +163,9 @@ _RULES: tuple[Rule, ...] = (
         title="GitHub token committed to the repository",
         stride="Information Disclosure",
         severity=Severity.CRITICAL,
-        pattern=re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{22,255})\b"),
+        pattern=re.compile(
+            r"\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{22,255})\b"
+        ),
         attack_scenario=(
             "A leaked personal access token can read private repositories, push code and, "
             "depending on scopes, act on behalf of the account."
@@ -250,7 +252,9 @@ _RULES: tuple[Rule, ...] = (
         stride="Spoofing",
         severity=Severity.HIGH,
         pattern=re.compile(r"\byaml\.load\s*\("),
-        skip=re.compile(r"SafeLoader|CSafeLoader|Loader\s*=\s*(?:yaml\.)?[A-Za-z]*(?:Safe|Base)Loader"),
+        skip=re.compile(
+            r"SafeLoader|CSafeLoader|Loader\s*=\s*(?:yaml\.)?[A-Za-z]*(?:Safe|Base)Loader"
+        ),
         attack_scenario=(
             "The default loader resolves arbitrary Python objects, so a crafted document can "
             "instantiate classes or execute code during parsing."
@@ -361,9 +365,7 @@ def iter_python_files(project_root: Path) -> Iterator[Path]:
     root = project_root.resolve()
     for path in sorted(root.rglob("*.py")):
         relative = path.relative_to(root)
-        if any(
-            part.startswith(".") or part in _EXCLUDED_DIRS for part in relative.parts[:-1]
-        ):
+        if any(part.startswith(".") or part in _EXCLUDED_DIRS for part in relative.parts[:-1]):
             continue
         if path.is_file():
             yield path
@@ -417,5 +419,12 @@ def scan_project(
         scanned += 1
         findings.extend(scan_source(text, path.relative_to(root), rules))
 
-    findings.sort(key=lambda finding: (-finding.severity.rank, finding.rule.id, str(finding.path), finding.line))
+    findings.sort(
+        key=lambda finding: (
+            -finding.severity.rank,
+            finding.rule.id,
+            str(finding.path),
+            finding.line,
+        )
+    )
     return ScanResult(findings=tuple(findings), files_scanned=scanned)

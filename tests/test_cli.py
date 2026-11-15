@@ -63,9 +63,7 @@ def test_analyze_human_output_summarises_what_it_did(make_project: MakeProject) 
 
 
 @pytest.mark.parametrize("fail_on", ["critical", "high", "medium", "low"])
-def test_analyze_fail_on_returns_one_for_findings(
-    make_project: MakeProject, fail_on: str
-) -> None:
+def test_analyze_fail_on_returns_one_for_findings(make_project: MakeProject, fail_on: str) -> None:
     project = make_project(DIRTY_PROJECT)
 
     exit_code, _ = invoke("analyze", str(project), "--fail-on", fail_on)

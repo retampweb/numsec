@@ -211,9 +211,7 @@ def analyze_project(
 
     # Generated artefacts must not become scan input.
     findings = tuple(
-        finding
-        for finding in scan.findings
-        if finding.path.parts[:2] != ("numsec", "threats")
+        finding for finding in scan.findings if finding.path.parts[:2] != ("numsec", "threats")
     )
     scan = ScanResult(findings=findings, files_scanned=scan.files_scanned)
     threats = build_threats(findings)

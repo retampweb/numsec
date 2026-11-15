@@ -57,7 +57,7 @@ def test_rule_matches(tmp_path: Path, source: str, rule_id: str) -> None:
         'password = "changeme"',
         'secret = "<your-secret>"',
         'client_secret = "{{ vault_secret }}"',
-        'password = getpass.getpass()',
+        "password = getpass.getpass()",
         "yaml.load(stream, Loader=yaml.SafeLoader)",
         "yaml.load(stream, Loader=CSafeLoader)",
         "subprocess.run(cmd, shell=True)  # nosec",
