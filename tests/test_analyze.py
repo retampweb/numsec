@@ -6,8 +6,8 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
-from numsec.analyze import GENERATED_MARKER, analyze_project
-from numsec.detect import Severity
+from numsec.analyze import GENERATED_MARKER, AnalysisResult, analyze_project
+from numsec.detect import ScanResult, Severity
 
 MakeProject = Callable[..., Path]
 
@@ -101,7 +101,9 @@ def test_stale_generated_threats_are_removed_and_handwritten_ones_kept(
 
 
 def test_result_is_json_serialisable_even_with_hostile_paths(tmp_path: Path) -> None:
-    project = tmp_path / 'we"ird dir \\ with spaces'
+    # Quotes and backslashes are illegal in NTFS names, so the on-disk part of the
+    # name is merely odd; quoting is covered below without touching the filesystem.
+    project = tmp_path / "we'ird dir [тест] with spaces"
     project.mkdir()
     (project / "leak.py").write_text('API_KEY = "sk-live-1234567890"\n', "utf-8")
 
@@ -111,6 +113,26 @@ def test_result_is_json_serialisable_even_with_hostile_paths(tmp_path: Path) -> 
     assert payload["project_root"] == project.as_posix()
     assert payload["max_severity"] == Severity.CRITICAL.value
     assert payload["threats"][0]["occurrences"][0]["location"] == "leak.py:1"
+
+
+def test_json_payload_escapes_quotes_and_backslashes() -> None:
+    """--ai-format used to be string-concatenated and broke on exactly this path."""
+    hostile = Path('/tmp/we"ird\\dir')
+
+    result = AnalysisResult(
+        project_root=hostile,
+        threats_dir=hostile / "numsec" / "threats",
+        scan=ScanResult(findings=(), files_scanned=0),
+        threats=(),
+        generated=(),
+        removed=(),
+        preserved=(),
+    )
+
+    payload = json.loads(json.dumps(result.to_dict()))
+
+    assert payload["project_root"] == hostile.as_posix()
+    assert '"' in payload["project_root"]
 
 
 def test_write_false_produces_no_artefacts(make_project: MakeProject) -> None:
